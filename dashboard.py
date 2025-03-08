@@ -6,6 +6,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 # Memuat dataset
 day_data = pd.read_csv("day.csv")
@@ -36,38 +37,43 @@ if selected_workingday != 'Semua':
 st.subheader("📌 Ringkasan Data Penyewaan Sepeda")
 st.write(df_filtered.describe())
 
-# Visualisasi: Rata-rata Penyewaan Sepeda per Musim
-st.subheader("🌤️ Rata-rata Penyewaan Sepeda Berdasarkan Musim")
-fig = px.bar(day_data, x='season', y='cnt', color='season', 
-             labels={'season': 'Musim', 'cnt': 'Jumlah Penyewaan'}, 
-             title="Penyewaan Sepeda Berdasarkan Musim",
-             hover_data=['cnt'])
-fig.update_xaxes(tickvals=[1, 2, 3, 4], ticktext=['Spring', 'Summer', 'Fall', 'Winter'])
-st.plotly_chart(fig)
+# =====================================================================
+# 1️⃣ Pola Penyewaan Sepeda: Hari Kerja vs. Hari Libur
+st.header("1. Pola Penyewaan Sepeda: Hari Kerja vs. Hari Libur")
+workingday_counts = day_data.groupby('workingday')['cnt'].mean().reset_index()
+workingday_counts['Kategori Hari'] = workingday_counts['workingday'].map({0: 'Hari Libur', 1: 'Hari Kerja'})
+fig1 = px.bar(workingday_counts, x='Kategori Hari', y='cnt', color='Kategori Hari',
+              labels={'cnt': 'Rata-rata Penyewaan Sepeda', 'Kategori Hari': 'Kategori Hari'},
+              title='Perbandingan Penyewaan di Hari Kerja vs. Libur',
+              hover_name='Kategori Hari', hover_data={'cnt': True})
+st.plotly_chart(fig1)
 
-# Visualisasi: Penyewaan Sepeda Berdasarkan Hari Kerja vs. Hari Libur
-st.subheader("📅 Penyewaan Sepeda Berdasarkan Hari Kerja vs. Libur")
-fig = px.bar(day_data, x='workingday', y='cnt', color='workingday', 
-             labels={'workingday': 'Kategori Hari', 'cnt': 'Jumlah Penyewaan'},
-             title="Perbandingan Penyewaan di Hari Kerja vs. Libur",
-             hover_data=['cnt'])
-fig.update_xaxes(tickvals=[0, 1], ticktext=['Hari Libur', 'Hari Kerja'])
-st.plotly_chart(fig)
+# =====================================================================
+# 2️⃣ Jam Sibuk Penyewaan Sepeda
+st.header("2. Jam Sibuk Penyewaan Sepeda")
+hourly_counts = hour_data.groupby('hr')['cnt'].mean().reset_index()
+fig2 = px.line(hourly_counts, x='hr', y='cnt', markers=True,
+               labels={'cnt': 'Rata-rata Penyewaan Sepeda', 'hr': 'Jam dalam Sehari'},
+               title='Tren Penyewaan Sepeda Berdasarkan Jam',
+               hover_name='hr', hover_data={'cnt': True})
+st.plotly_chart(fig2)
 
-# Visualisasi: Pola Penyewaan Sepeda Berdasarkan Jam (Dirapikan)
-st.subheader("🕒 Pola Penyewaan Sepeda Berdasarkan Jam")
-df_hour_avg = hour_data.groupby('hr', as_index=False)['cnt'].mean()
-fig = px.line(df_hour_avg, x='hr', y='cnt', markers=True, 
-              labels={'hr': 'Jam', 'cnt': 'Jumlah Penyewaan Rata-rata'},
-              title="Tren Rata-rata Penyewaan Sepeda Harian",
-              hover_data=['cnt'])
-fig.update_traces(line=dict(width=2), marker=dict(size=6))
-st.plotly_chart(fig)
+# =====================================================================
+# 3️⃣ Pengaruh Cuaca terhadap Penyewaan Sepeda
+st.header("3. Pengaruh Cuaca terhadap Penyewaan Sepeda")
+weather_counts = day_data.groupby(['weathersit', 'season'])['cnt'].mean().reset_index()
+weather_counts['Kondisi Cuaca'] = weather_counts['weathersit'].map({1: 'Cerah', 2: 'Berkabut', 3: 'Hujan Ringan', 4: 'Hujan Lebat'})
+season_map = {1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'}
+weather_counts['Musim'] = weather_counts['season'].map(season_map)
+fig3 = px.bar(weather_counts, x='Kondisi Cuaca', y='cnt', color='Musim',
+              barmode='group', labels={'cnt': 'Rata-rata Penyewaan', 'Kondisi Cuaca': 'Kondisi Cuaca'},
+              title='Dampak Cuaca dan Musim terhadap Penyewaan Sepeda',
+              hover_name='Kondisi Cuaca', hover_data={'cnt': True})
+st.plotly_chart(fig3)
 
+# =====================================================================
 # Insight Kesimpulan
-st.subheader("📌 Insight dan Kesimpulan")
-st.markdown("- Penyewaan sepeda lebih tinggi pada hari kerja dibandingkan hari libur, menunjukkan bahwa sepeda digunakan sebagai alat transportasi utama untuk perjalanan kerja atau sekolah.")
-st.markdown("- Jam sibuk terjadi pada pagi dan sore hari, mengikuti pola perjalanan pekerja dan pelajar.")
-st.markdown("- Faktor cuaca dan musim sangat mempengaruhi jumlah penyewaan, dengan penyewaan tertinggi terjadi di musim panas dan terendah di musim dingin.")
-
-st.markdown("\n💡 **Kesimpulan:** Untuk meningkatkan efisiensi layanan, penyedia sepeda dapat menyesuaikan jumlah unit berdasarkan jam sibuk dan musim, serta menerapkan strategi promosi di akhir pekan dan musim dingin.")
+st.subheader("📌 Insight")
+st.markdown("**Insight Pertanyaan 1:** Penyewaan sepeda lebih tinggi pada hari kerja dibandingkan hari libur, menunjukkan bahwa sepeda digunakan sebagai alat transportasi utama.")
+st.markdown("**Insight Pertanyaan 2:** Puncak penyewaan terjadi pada pagi (08:00) dan sore (17:00 - 18:00), menunjukkan pola commuting pekerja dan pelajar.")
+st.markdown("**Insight Pertanyaan 3:** Penyewaan sepeda tertinggi terjadi pada cuaca cerah, sedangkan hujan atau kabut cenderung menurunkan jumlah penyewaan.")
